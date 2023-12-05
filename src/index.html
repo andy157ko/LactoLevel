@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Realtime Firebase Data</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8tcXyA0qKaUPClM8IlGnD-_WaT1yYS3c",
+            authDomain: "breast-milk-volume.firebaseapp.com",
+            databaseURL: "https://breast-milk-volume-default-rtdb.firebaseio.com",
+            projectId: "breast-milk-volume",
+            storageBucket: "breast-milk-volume.appspot.com",
+            messagingSenderId: "1022173722362",
+            appId: "1:1022173722362:web:ad1a1b0431c2adbc7d3b43",
+            measurementId: "G-B3MK00Y48N"
+        };
+        //Code for authentication
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        function signIn() {
+            const email = 'linrally@gmail.com';
+            const password = 'aaaaaaaa';
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    listenToData();
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    console.error('Error signing in:', errorCode, errorMessage);
+                });
+        }
+
+        //Code for calibration according to a curve - not utilized
+        function calculateVolume(sensorReading) {
+            const a = 1.0;
+            const b = 1.0;
+            const volume = a * Math.exp(b * sensorReading);
+            return 5;
+        }
+
+        //Reading the data as the data is changed in the database
+        function listenToData() {
+            const testRef = ref(db, 'users/' + "meazDgpQq1hyJUCz1H3CplHUXea2" + "/sensorRaw");
+            onValue(testRef, (snapshot) => {
+                const sensorRaw = snapshot.val();
+                const calibratedVolume = calculateVolume(sensorRaw);
+                updateData(calibratedVolume);
+            }, {
+                onlyOnce: false
+            });
+        }
+        //Code for the line graph in the website that updates based on second
+        const ctx = document.getElementById('realtimeChart').getContext('2d');
+        const realtimeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Volume',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        //Utilizing buttons to record data onto txt file
+        let isRecording = false;
+        let recordedData = [];
+
+        document.getElementById('recordBtn').addEventListener('click', function () {
+            isRecording = true;
+            recordedData = [];
+        //for autmating datacollection
+        //     setTimeout(function () {
+        //         isRecording = false;
+        //         downloadData(recordedData.join("\n"), "recordedData.txt");
+        //     }, 90000);
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', function () {
+            isRecording = false;
+            downloadData(recordedData.join("\n"), "recordedData.txt");
+        });
+
+        //Calibration
+        let isCalibrating = false;
+        let isCalibrated = false;
+        let calibrationData = [];
+        let calibrationValue = 0;
+        document.getElementById('caliBtn').addEventListener('click', function () {
+            isCalibrating = true;
+            calibrationData = [];
+            setTimeout(function () {
+                isCalibrating = false;
+                isCalibrated = true;
+                calibrationValue = calibrationData.reduce((a, b) => a + b, 0) / calibrationData.length;
+            }, 10000);
+        });
+
+        function downloadData(data, filename) {
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        let noflowData = [];
+        let isCheckingNoflow = false;
+
+        //Starting the breast milk flow check
+        function startNoflowCheck() {
+            noflowData = [];
+            isCheckingNoflow = true;
+            setTimeout(function () {
+                isCheckingNoflow = false;
+                checkNoflowCondition();
+            }, 1000);
+        }
+
+        //Checking if no breast milk is coming out
+        function checkNoflowCondition() {
+            if (noflowData.length > 0) {
+                const max = Math.max(...noflowData);
+                const min = Math.min(...noflowData);
+                if (max - min <= 50) {
+                    document.getElementById('fluid').style.backgroundColor = 'red';
+                    alert('No breast milk is pumping.');
+                }
+            }
+        }
+
+        //updating everyhing
+        let timeElapsed = 0;
+        function updateData(value) {
+            const maxValue = 10;
+            const percentage = (value / maxValue) * 100;
+            document.getElementById('data').innerText = value;
+            document.getElementById('fluid').style.height = percentage + '%';
+
+            
+
+            const maxDataPoints = 100;
+            if (realtimeChart.data.labels.length > maxDataPoints) {
+                realtimeChart.data.labels.shift();
+                realtimeChart.data.datasets.forEach((dataset) => {
+                    dataset.data.shift();
+                });
+            }
+            realtimeChart.update();
+            if (isRecording) {
+                recordedData.push(value);
+            }
+
+            if (isCalibrating) {
+                calibrationData.push(value);
+            }
+
+            let adjustedValue = value - calibrationValue;
+            if (adjustedValue < 0) {
+                adjustedValue = 0;
+            }
+
+            if (isCalibrated) {
+                document.getElementById('data').innerText = adjustedValue;
+                const percentage = (adjustedValue / maxValue) * 100;
+                document.getElementById('data').innerText = adjustedValue;
+                document.getElementById('fluid').style.height = percentage + '%';
+                document.getElementById('calicheck').innerText = "Calibrated"
+            }
+
+            if (isCalibrated) {
+                realtimeChart.data.labels.push(timeElapsed);
+                timeElapsed++;
+                realtimeChart.data.datasets.forEach((dataset) => {
+                    dataset.data.push(adjustedValue);
+                });
+            }
+            else {
+                realtimeChart.data.labels.push(timeElapsed);
+                timeElapsed++;
+                realtimeChart.data.datasets.forEach((dataset) => {
+                    dataset.data.push(value);
+                });
+            }
+
+            if (isRecording) {
+                recordedData.push(adjustedValue);
+            }
+
+            if (isCheckingNoflow) {
+                noflowData.push(value);
+            }
+
+        }
+        signIn();
+    </script>
+
+</head>
+
+<body>
+
+    <h1>Realtime Volume</h1>
+    <div id="container">
+        <h4 id="calicheck"></h4>
+        <div id="fluid-container">
+            <div id="fluid"></div>
+            <div id="data">0</div>
+        </div>
+        <button id="recordBtn">Record</button>
+        <button id="stopBtn">Stop</button>
+        <button id="caliBtn">Calibrate</button>
+        <div>
+            <canvas id="realtimeChart"></canvas>
+        </div>
+    </div>
+
+</body>
+
+</html>

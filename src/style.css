@@ -1,0 +1,49 @@
+.container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+body {
+    text-align: center;
+    font-family: Arial, sans-serif; 
+}
+
+h1 {
+    font-size: 2em; 
+    margin-top: 50px;
+}
+
+#data {
+    font-size: 1.5em;
+    color: #333;
+    margin-top: 20px; 
+}
+
+#fluid-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 2px solid #000;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+#fluid {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: #0099ff;
+    transition: height 0.6s ease-in-out;
+}
+
+#data {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2em;
+    z-index: 1;
+}
