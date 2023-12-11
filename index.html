@@ -46,10 +46,53 @@
 
         //Code for calibration according to a curve - not utilized
         function calculateVolume(sensorReading) {
-            const a = 1.0;
-            const b = 1.0;
-            const volume = a * Math.exp(b * sensorReading);
-            return sensorReading;
+            // const data = [
+            //     { reading: 50.6125, volumeOz: 0 },
+            //     { reading: 451.6075949, volumeOz: 0.67628 },
+            //     { reading: 652.88, volumeOz: 1.35256},
+            //     { reading: 750.4909091, volumeOz: 2.02884},
+            //     { reading: 836.4038462, volumeOz: 2.70512},
+            //     { reading: 935.8888889, volumeOz: 3.3814},
+            //     { reading: 1053.923077, volumeOz: 4.05768},
+            //     { reading: 1089.5, volumeOz: 4.73396},
+            //     { reading: 1176.566038, volumeOz: 5.41024 },
+            //     { reading: 1252.754717, volumeOz: 6.08652 },
+            //     { reading: 1267.518519, volumeOz: 6.7628 },
+            //     { reading: 1352.735849, volumeOz: 7.43908 },
+            //     { reading: 1388.072727, volumeOz: 8.11536 },
+            //     { reading: 1400.754717, volumeOz: 8.79164 }
+            // ];
+
+            // // Find the two closest data points
+            // let lowerBound = null;
+            // let upperBound = null;
+
+            // for (let i = 0; i < data.length - 1; i++) {
+            //     if (sensorReading >= data[i].reading && sensorReading <= data[i + 1].reading) {
+            //         lowerBound = data[i];
+            //         upperBound = data[i + 1];
+            //         break;
+            //     }
+            // }
+
+            // // If the sensor reading is outside known data, return null or extrapolate
+            // if (!lowerBound || !upperBound) {
+            //     return null; // or handle extrapolation
+            // }
+
+            // // Linear interpolation
+            // const fraction = (sensorReading - lowerBound.reading) / (upperBound.reading - lowerBound.reading);
+            // return lowerBound.volumeOz + fraction * (upperBound.volumeOz - lowerBound.volumeOz);
+            //Volume Calibration
+            const volume = 68.5 + -0.044*(sensorReading) + 7E-06*(sensorReading)*(sensorReading);
+            if(volume < 0){
+                return 0;
+            }
+            else{
+                return volume;
+            }
+            //Return raw
+            //return (sensorReading)
         }
 
         //Reading the data as the data is changed in the database
@@ -93,11 +136,11 @@
         document.getElementById('recordBtn').addEventListener('click', function () {
             isRecording = true;
             recordedData = [];
-        //for autmating datacollection
-        //     setTimeout(function () {
-        //         isRecording = false;
-        //         downloadData(recordedData.join("\n"), "recordedData.txt");
-        //     }, 90000);
+            //for autmating datacollection
+            //     setTimeout(function () {
+            //         isRecording = false;
+            //         downloadData(recordedData.join("\n"), "recordedData.txt");
+            //     }, 90000);
         });
 
         document.getElementById('stopBtn').addEventListener('click', function () {
@@ -163,7 +206,7 @@
             document.getElementById('data').innerText = value;
             document.getElementById('fluid').style.height = percentage + '%';
 
-            
+
 
             const maxDataPoints = 100;
             if (realtimeChart.data.labels.length > maxDataPoints) {
